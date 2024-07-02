@@ -1,20 +1,27 @@
-const Url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_week.geojson"
+const Url = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
 
 // set up URL link
 d3.json(Url).then(function (data) {
     let quake = data.features
   createFeatures(quake);
 });
-
+let circlemarkers = []
 function createFeatures(earthquakeData) {
 
   // Creating Popups
-  function onEachFeature(feature, layer) {
+  function onEachFeature(feature) {
+    let depth = feature.geometry.coordinates[2]
+    circlemarkers.push(L.circle([feature.geometry.coordinates[1], feature.geometry.coordinates[0]],
+      {radius: [feature.properties.mag]*20000,
+        fillColor: markercolor(depth), 
+        fillOpacity:.6,
+        weight: .5})
+      .bindPopup(`<h3>Location: ${feature.properties.place}</h3>
+        <hr><p>Magnitude: ${feature.properties.mag}</p>
+        <hr><p>Depth: ${feature.geometry.coordinates[2]}</p>`));
     
-    layer.bindPopup(`<h3>Location: ${feature.properties.place}</h3><hr><p>Magnitude: ${feature.properties.mag}</p>`);
-    // L.circle([50.5, 30.5], {radius: 200}).addTo(earthquakes);
   }
-  
+ 
   // creating geoJSON with feature
   let earthquakes = L.geoJSON(earthquakeData, {
     onEachFeature: onEachFeature
@@ -22,6 +29,22 @@ function createFeatures(earthquakeData) {
 
   createMap(earthquakes);
 }
+
+function markercolor(depth){
+  if (depth >= 100) {
+    return "red";
+} else if (depth>=50) {
+    return "orange";
+} else if (depth >=10) {
+    return "yellow";
+} else if (depth >= 5) {
+    return "green";
+} else {
+    return "blue";
+}
+ 
+}
+
 
 function createMap(earthquakes) {
     
@@ -32,19 +55,19 @@ function createMap(earthquakes) {
   let baseMaps = {
     "Street Map": street
   };
-
+  let circlegroup = L.layerGroup(circlemarkers)
   // Creating overlay
   let overlayMaps = {
-    Earthquakes: earthquakes
+    earthquakes: circlegroup
   };
-
+   
   // Creation of map
   let myMap = L.map("map", {
     center: [
       37.09, -95.71
     ],
     zoom: 5,
-    layers: [street, earthquakes]
+    layers: [street, circlegroup]
   });
   
 
@@ -54,5 +77,4 @@ function createMap(earthquakes) {
   }).addTo(myMap);
 
 
-  L.circle([properties.geometry.coordinates[0],properties.geometry.coordinates[1] ], {radius: ([properties.mag]*20)}).addTo(myMap);
 }
